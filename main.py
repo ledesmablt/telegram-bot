@@ -12,8 +12,13 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
 
 # add telegram bot parameters
 tg_api = 'https://api.telegram.org/bot{}/sendMessage?chat_id={}&parse_mode=Markdown&text={}'
-tg_token = '869118559:AAECb9Mit-WP8vSvyqc4kBOarDfM8ByhBNQ'
-tg_chatid = '712965854'
+
+secret_path = 'data/secret.json'
+with open(secret_path, 'r') as f:
+    secret_info = json.load(f)
+
+tg_token = secret_info['TOKEN']
+chat_id = secret_info['CHAT_ID']
 
 # enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',

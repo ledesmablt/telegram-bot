@@ -1,8 +1,11 @@
+test.py
+data/secret.json
+data/scheduled_msgs.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-test.py
 
 # C extensions
 *.so
