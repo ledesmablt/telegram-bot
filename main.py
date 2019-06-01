@@ -1,7 +1,7 @@
 import json
 import logging
-from uuid import uuid4
-from datetime import datetime
+from uuid import uuid1
+from dateutil import parser
 from itertools import product
 
 from telegram.utils.helpers import escape_markdown
@@ -35,9 +35,9 @@ try:
         all_scheduled_msgs = json.load(f)
 except:
     all_scheduled_msgs = {
-        'Monthly':[],   # [msg, [day, hr, min]]
-        'Weekly':[],    # [msg, [day, hr, min]]
-        'Daily':[]      # [msg, [hr, min]]
+        'Monthly':[],   # [uuid, msg, [day, hr, min]]
+        'Weekly':[],    # [uuid, msg, [day, hr, min]]
+        'Daily':[]      # [uuid, msg, [hr, min]]
     }
 
 output = {
@@ -92,6 +92,9 @@ def schedule_time(bot, update):
     if msg_info['setting'] in ('Monthly','Weekly'):
         mo_days = [int(i) for i in res.split(' ')]
         msg_info['mw_sched'] = mo_days
+    
+    else:
+        msg_info['setting'] = 'Daily'
 
     update.message.reply_text(
         """Please enter what time/s you would like to receive the message, separated by spaces.\n
@@ -105,7 +108,7 @@ def confirm(bot, update):
     complete_sched = []
     reply_keyboard = [['Yes', 'No']]
 
-    time_sched = [[datetime.strptime(i, '%I:%M%p').hour, datetime.strptime(i, '%I:%M%p').minute] for i in res.split(' ')]
+    time_sched = [[parser.parse(i).hour, parser.parse(i).minute] for i in res.split(' ')]
     msg_info['time_sched'] = time_sched
 
     if msg_info['setting'] == 'Daily':
@@ -115,7 +118,7 @@ def confirm(bot, update):
         complete_sched = [[i[0], i[1][0], i[1][1]] for i in product(msg_info['mw_sched'], msg_info['time_sched'])]
 
     output['setting'] = msg_info['setting']
-    output['content'] = [msg_info['text'], complete_sched]
+    output['content'] = [uuid1(), msg_info['text'], complete_sched]
 
     update.message.reply_text(
         """Confirm these settings?\n\n
