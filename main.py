@@ -42,7 +42,8 @@ except:
     all_scheduled_msgs = {
         'Monthly':[],   # [uuid, msg, [day, hr, min]]
         'Weekly':[],    # [uuid, msg, [day, hr, min]]
-        'Daily':[]      # [uuid, msg, [hr, min]]
+        'Daily':[],     # [uuid, msg, [hr, min]]
+        'Once':[]
     }
 
 output = {
@@ -58,7 +59,7 @@ def create_msg(bot, update):
     return 'MSG'
 
 def schedule_msg(bot, update):
-    reply_keyboard = [['Monthly', 'Weekly', 'Daily']]
+    reply_keyboard = [['Monthly', 'Weekly', 'Daily', 'Once']]
     res = update.message.text
     msg_info['text'] = res
 
@@ -98,8 +99,8 @@ def schedule_time(bot, update):
         mo_days = [int(i) for i in res.split(' ')]
         msg_info['mw_sched'] = mo_days
     
-    else:
-        msg_info['setting'] = 'Daily'
+    else:   # is either daily or once
+        msg_info['setting'] = res
 
     update.message.reply_text(
         """Please enter what time/s you would like to receive the message, separated by spaces.\n
@@ -189,7 +190,7 @@ sched_handler = ConversationHandler(
         'MSG': [MessageHandler(Filters.text, schedule_msg)],
         'SCHEDULE': [
             RegexHandler('^(Monthly|Weekly)$', schedule_any),
-            RegexHandler('Daily', schedule_time)
+            RegexHandler('^(Daily|Once)$', schedule_time)
         ],
         'TIME' : [MessageHandler(Filters.text, schedule_time)],
         'CONFIRM' : [MessageHandler(Filters.text, confirm)],
