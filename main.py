@@ -11,8 +11,6 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
                           ConversationHandler)
 
 # add telegram bot parameters
-tg_api = 'https://api.telegram.org/bot{}/sendMessage?chat_id={}&parse_mode=Markdown&text={}'
-
 secret_path = 'data/secret.json'
 with open(secret_path, 'r') as f:
     secret_info = json.load(f)
@@ -40,16 +38,21 @@ try:
         all_scheduled_msgs = json.load(f)
 except:
     all_scheduled_msgs = {
-        'Monthly':[],   # [uuid, msg, [day, hr, min]]
-        'Weekly':[],    # [uuid, msg, [day, hr, min]]
-        'Daily':[],     # [uuid, msg, [hr, min]]
-        'Once':[]
+        'Weekly':[],    # {id, text, [day, time]}
+        'Monthly':[],   # {id, text, [day, time]}
+        'Daily':[],     # {id, text, time}
+        'Once':[]       # {id, text, time}
     }
 
 output = {
     'setting':None,
     'content':None
 }
+
+def reset_variables():
+    global output, msg_info
+    output = {'setting':None, 'content':None}
+    msg_info = {'text':None, 'setting':None, 'mw_sched':None, 'time_sched':None}
 
 
 def create_msg(bot, update):
@@ -114,17 +117,21 @@ def confirm(bot, update):
     complete_sched = []
     reply_keyboard = [['Yes', 'No']]
 
-    time_sched = [[parser.parse(i).hour, parser.parse(i).minute] for i in res.split(' ')]
+    time_sched = ['{}:{}'.format(parser.parse(i).hour,parser.parse(i).minute) for i in res.split(' ')]
     msg_info['time_sched'] = time_sched
 
-    if msg_info['setting'] == 'Daily':
+    if msg_info['setting'] in ('Daily', 'Once'):
         complete_sched = time_sched
     else:
         # [day (of month/week), hour, minute]
         complete_sched = [[i[0], i[1][0], i[1][1]] for i in product(msg_info['mw_sched'], msg_info['time_sched'])]
 
     output['setting'] = msg_info['setting']
-    output['content'] = [uuid1(), msg_info['text'], complete_sched]
+    output['content'] = {
+        'id' : str(uuid1().int),
+        'text' : msg_info['text'],
+        'sched' : complete_sched
+    }
 
     update.message.reply_text(
         """Confirm these settings?\n\n
@@ -136,11 +143,11 @@ def confirm(bot, update):
     return 'SAVE'
 
 def save(bot, update):
-    global output
+    global output, msg_info
     res = update.message.text
     if res == 'Yes':
-        all_scheduled_msgs[output['setting']] = output['content']
-        with open(filename, 'w') as f:
+        all_scheduled_msgs[output['setting']].append(output['content'])
+        with open(filename, 'r') as f:
             json.dump(all_scheduled_msgs, f)
             logger.info('Results written to file.')
 
@@ -155,14 +162,15 @@ def save(bot, update):
         )
 
     # reset variables
-    output = {'setting':None, 'content':None}
-    msg_info = {'text':None, 'setting':None, 'mw_sched':None, 'time_sched':None}
+    reset_variables()
+
 
     return ConversationHandler.END
 
 
 ### from test.py
 def cancel(bot, update):
+    reset_variables()
     logger.info("User canceled the conversation.")
     update.message.reply_text(
         'User canceled the conversation.',
