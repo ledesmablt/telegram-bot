@@ -117,7 +117,7 @@ def confirm(bot, update):
     complete_sched = []
     reply_keyboard = [['Yes', 'No']]
 
-    time_sched = ['{}:{}'.format(parser.parse(i).strftime('%H:%M')) for i in res.split(' ')]
+    time_sched = [parser.parse(i).strftime('%H:%M') for i in res.split(' ')]
     msg_info['time_sched'] = time_sched
 
     if msg_info['setting'] in ('Daily', 'Once'):
