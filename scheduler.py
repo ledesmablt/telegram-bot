@@ -37,7 +37,6 @@ def check_for_updates():
     # update one-time messages
     for msg in scheduled_msgs['Once']:
         schedule.every().day.at(msg['sched'][0]).do(send_msg, text=msg['text'], onetime=True).tag(msg['id'], 'Once')
-        print('msg scheduled')
 
     # daily
     for msg in scheduled_msgs['Daily']:
@@ -68,8 +67,7 @@ def check_for_updates():
             elif sched[0]==7:
                 schedule.every().sunday.at(sched[1]).do(send_msg, text=msg['text']).tag(msg['id'], 'Weekly')  
     
-    print('File has been updated.')
-    print('{} jobs running'.format(len(schedule.jobs)))
+    print('File updated. {} jobs running'.format(len(schedule.jobs)))
     return
 
 
