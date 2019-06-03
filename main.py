@@ -117,14 +117,14 @@ def confirm(bot, update):
     complete_sched = []
     reply_keyboard = [['Yes', 'No']]
 
-    time_sched = ['{}:{}'.format(parser.parse(i).hour,parser.parse(i).minute) for i in res.split(' ')]
+    time_sched = ['{}:{}'.format(parser.parse(i).strftime('%H:%M')) for i in res.split(' ')]
     msg_info['time_sched'] = time_sched
 
     if msg_info['setting'] in ('Daily', 'Once'):
         complete_sched = time_sched
     else:
-        # [day (of month/week), hour, minute]
-        complete_sched = [[i[0], i[1][0], i[1][1]] for i in product(msg_info['mw_sched'], msg_info['time_sched'])]
+        # [day (of month/week), time]
+        complete_sched = [[i[0], i[1]] for i in product(msg_info['mw_sched'], msg_info['time_sched'])]
 
     output['setting'] = msg_info['setting']
     output['content'] = {
@@ -147,7 +147,7 @@ def save(bot, update):
     res = update.message.text
     if res == 'Yes':
         all_scheduled_msgs[output['setting']].append(output['content'])
-        with open(filename, 'r') as f:
+        with open(filename, 'w') as f:
             json.dump(all_scheduled_msgs, f)
             logger.info('Results written to file.')
 
@@ -163,7 +163,6 @@ def save(bot, update):
 
     # reset variables
     reset_variables()
-
 
     return ConversationHandler.END
 
