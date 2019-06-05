@@ -134,7 +134,7 @@ def confirm(bot, update):
 
     update.message.reply_text(
         "Confirm these settings?\n\n{0}\n\n{1}"
-            .format(complete_sched, msg_info['text']),
+            .format(msg_info['text'], complete_sched),
         reply_markup=ReplyKeyboardMarkup(reply_keyboard)
     )
     return 'SAVE'
@@ -177,10 +177,10 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def list_msgs(bot, update, chat_data):
+def list_msgs_start(bot, update, chat_data):
     res = update.message.text
     chat_data['conversation'] = res
-    reply_keyboard = [['All', 'Monthly', 'Weekly'], ['Daily', 'Once']]
+    reply_keyboard = [['All'], ['Monthly', 'Weekly'], ['Daily', 'Once']]
 
     update.message.reply_text(
         "Select message group.",
@@ -287,7 +287,7 @@ sched_handler = ConversationHandler(
 )
 
 view_handler = ConversationHandler(
-    entry_points=[CommandHandler('list', list_msgs, pass_chat_data=True)],
+    entry_points=[CommandHandler('list', list_msgs_start, pass_chat_data=True)],
 
     states={
         'LIST_MSGS':[
@@ -303,7 +303,7 @@ view_handler = ConversationHandler(
 )
 
 delete_handler = ConversationHandler(
-    entry_points=[CommandHandler('delete', list_msgs, pass_chat_data=True)],
+    entry_points=[CommandHandler('delete', list_msgs_start, pass_chat_data=True)],
     states={
         'LIST_MSGS':[
             RegexHandler('^(All|Monthly|Weekly|Daily|Once)$', list_msgs, pass_chat_data=True)
