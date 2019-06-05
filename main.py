@@ -71,7 +71,6 @@ def schedule_msg(bot, update):
         "I want this to run...",
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     )
-
     return 'SCHEDULE'
 
 def schedule_any(bot, update):
@@ -87,8 +86,8 @@ def schedule_any(bot, update):
 
     elif res == 'Weekly':
         update.message.reply_text(
-            """Please select the day/s when you want to receive the message, separated by spaces.\n
-            1 - 7 : Monday - Sunday""",
+            "Please select the day/s when you want to receive the message, separated by spaces.\n"
+            "1 - 7 : Monday - Sunday",
             reply_markup=ReplyKeyboardRemove()
         )
         return 'TIME'
@@ -107,10 +106,9 @@ def schedule_time(bot, update):
         msg_info['setting'] = res
 
     update.message.reply_text(
-        """Please enter what time/s you would like to receive the message, separated by spaces.\n
-        ex. 1:30PM"""
+        "Please enter what time/s you would like to receive the message, separated by spaces.\n"
+        "ex. 1:30PM"
     )
-
     return 'CONFIRM'
     
 def confirm(bot, update):
@@ -135,12 +133,10 @@ def confirm(bot, update):
     }
 
     update.message.reply_text(
-        """Confirm these settings?\n\n
-            {0}\n\n{1}
-            """.format(complete_sched, msg_info['text']),
-            reply_markup=ReplyKeyboardMarkup(reply_keyboard)
+        "Confirm these settings?\n\n{0}\n\n{1}"
+            .format(complete_sched, msg_info['text']),
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard)
     )
-
     return 'SAVE'
 
 def save(bot, update):
@@ -162,9 +158,7 @@ def save(bot, update):
             reply_markup=ReplyKeyboardRemove()
         )
 
-    # reset variables
     reset_variables()
-
     return ConversationHandler.END
 
 
@@ -176,7 +170,6 @@ def cancel(bot, update):
         'User canceled the conversation.',
         reply_markup=ReplyKeyboardRemove()
     )
-
     return ConversationHandler.END
 
 def error(bot, update, error):
@@ -184,7 +177,7 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def view_msgs(bot, update, chat_data):
+def list_msgs(bot, update, chat_data):
     res = update.message.text
     chat_data['conversation'] = res
     reply_keyboard = [['All', 'Monthly', 'Weekly'], ['Daily', 'Once']]
@@ -211,7 +204,6 @@ def list_msgs(bot, update, chat_data):
         output_string += '\n{0}. {1}'.format(i+1, msg)
     
     update.message.reply_text(output_string)
-
     return 'SHOW_MSG'
 
 
@@ -295,7 +287,7 @@ sched_handler = ConversationHandler(
 )
 
 view_handler = ConversationHandler(
-    entry_points=[CommandHandler('view', view_msgs, pass_chat_data=True)],
+    entry_points=[CommandHandler('list', list_msgs, pass_chat_data=True)],
 
     states={
         'LIST_MSGS':[
@@ -311,7 +303,7 @@ view_handler = ConversationHandler(
 )
 
 delete_handler = ConversationHandler(
-    entry_points=[CommandHandler('delete', view_msgs, pass_chat_data=True)],
+    entry_points=[CommandHandler('delete', list_msgs, pass_chat_data=True)],
     states={
         'LIST_MSGS':[
             RegexHandler('^(All|Monthly|Weekly|Daily|Once)$', list_msgs, pass_chat_data=True)
