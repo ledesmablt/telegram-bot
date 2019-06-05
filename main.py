@@ -3,6 +3,7 @@ import logging
 from uuid import uuid1
 from dateutil import parser
 from itertools import product
+import re
 
 from telegram.utils.helpers import escape_markdown
 
@@ -183,14 +184,65 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-# main program
+def view_msgs(bot, update):
+    res = update.message.text
+    reply_keyboard = [['All', 'Monthly', 'Weekly'], ['Daily', 'Once']]
 
+    update.message.reply_text(
+        "Select message group.",
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    )
+    return 'LIST_MSGS'
+
+def list_msgs(bot, update, chat_data):
+    res = update.message.text
+    chat_data['setting'] = res
+    if res == 'All':
+        output_msgs = [msg for grp in all_scheduled_msgs.values() for msg in grp]
+    else:
+        output_msgs = [msg for msg in all_scheduled_msgs[res]]
+    
+    output_string = "Please enter the # of the message you want to view."
+    for i, msg in enumerate(output_msgs):
+        msg = msg['text']
+        if len(msg) > 25:
+            msg = msg[:23] + '...'  # shorten long messages
+        output_string += '\n{0}. {1}'.format(i+1, msg)
+    
+    update.message.reply_text(output_string)
+
+    return 'SHOW_MSG'
+
+
+def show_msg(bot, update, chat_data):
+    res = update.message.text
+    if chat_data['setting'] == 'All':
+        output_msgs = [msg for grp in all_scheduled_msgs.values() for msg in grp]
+    else:
+        output_msgs = [msg for msg in all_scheduled_msgs[chat_data['setting']]]
+    
+    ind = int(res) - 1
+    msg = output_msgs[ind]
+    output_string = "{0}\n\n{1}".format(msg['text'], '\n'.join([str(m) for m in msg['sched']]))
+
+    update.message.reply_text(output_string)
+
+    return ConversationHandler.END
+
+
+# lookup UNID in all_scheduled_msgs and remove
+# write to file
+# scheduler will update accordingly
+
+
+# main program
 updater = Updater(tg_token)
 dp = updater.dispatcher
 
 sched_handler = ConversationHandler(
     entry_points=[
-        CommandHandler('schedule', create_msg)
+        CommandHandler('schedule', create_msg),
+        CommandHandler('start', create_msg)
     ],
 
     states={
@@ -205,10 +257,38 @@ sched_handler = ConversationHandler(
     },
 
     fallbacks=[CommandHandler('cancel', cancel)]
+)
 
+view_handler = ConversationHandler(
+    entry_points=[CommandHandler('view', view_msgs)],
+
+    states={
+        'LIST_MSGS':[
+            RegexHandler('^(All|Monthly|Weekly|Daily|Once)$', list_msgs, pass_chat_data=True)
+        ],
+        'SHOW_MSG':[MessageHandler(Filters.text, show_msg, pass_chat_data=True)]
+    },
+
+    fallbacks=[
+        CommandHandler('cancel',cancel),
+        RegexHandler('^(back)$', cancel)
+    ]
+)
+
+delete_handler = ConversationHandler(
+    entry_points=[CommandHandler('delete', view_msgs)],
+    states={
+        'LIST_MSGS':[
+            RegexHandler('^(All|Monthly|Weekly|Daily|Once)$', list_msgs, pass_chat_data=True)
+        ],
+         
+    },
+    
+    fallbacks=[CommandHandler('cancel', cancel)]
 )
 
 dp.add_handler(sched_handler)
+dp.add_handler(view_handler)
 dp.add_error_handler(error)
 updater.start_polling()
 updater.idle()
