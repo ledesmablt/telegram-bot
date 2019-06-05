@@ -36,9 +36,9 @@ msg_info = {    # notif_message, 'Monthly/Weekly/Daily', mo/week sched (None if 
 
 try:
     with open(filename, 'r') as f:
-        all_scheduled_msgs = json.load(f)
+        all_msgs = json.load(f)
 except:
-    all_scheduled_msgs = {
+    all_msgs = {
         'Weekly':[],    # {id, text, [day, time]}
         'Monthly':[],   # {id, text, [day, time]}
         'Daily':[],     # {id, text, time}
@@ -147,9 +147,9 @@ def save(bot, update):
     global output, msg_info
     res = update.message.text
     if res == 'Yes':
-        all_scheduled_msgs[output['setting']].append(output['content'])
+        all_msgs[output['setting']].append(output['content'])
         with open(filename, 'w') as f:
-            json.dump(all_scheduled_msgs, f)
+            json.dump(all_msgs, f)
             logger.info('Results written to file.')
 
         update.message.reply_text(
@@ -184,8 +184,9 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 
-def view_msgs(bot, update):
+def view_msgs(bot, update, chat_data):
     res = update.message.text
+    chat_data['conversation'] = res
     reply_keyboard = [['All', 'Monthly', 'Weekly'], ['Daily', 'Once']]
 
     update.message.reply_text(
@@ -198,9 +199,9 @@ def list_msgs(bot, update, chat_data):
     res = update.message.text
     chat_data['setting'] = res
     if res == 'All':
-        output_msgs = [msg for grp in all_scheduled_msgs.values() for msg in grp]
+        output_msgs = [msg for grp in all_msgs.values() for msg in grp]
     else:
-        output_msgs = [msg for msg in all_scheduled_msgs[res]]
+        output_msgs = [msg for msg in all_msgs[res]]
     
     output_string = "Please enter the # of the message you want to view."
     for i, msg in enumerate(output_msgs):
@@ -216,23 +217,57 @@ def list_msgs(bot, update, chat_data):
 
 def show_msg(bot, update, chat_data):
     res = update.message.text
+
     if chat_data['setting'] == 'All':
-        output_msgs = [msg for grp in all_scheduled_msgs.values() for msg in grp]
+        output_msgs = [msg for grp in all_msgs.values() for msg in grp]
     else:
-        output_msgs = [msg for msg in all_scheduled_msgs[chat_data['setting']]]
+        output_msgs = [msg for msg in all_msgs[chat_data['setting']]]
     
     ind = int(res) - 1
     msg = output_msgs[ind]
     output_string = "{0}\n\n{1}".format(msg['text'], '\n'.join([str(m) for m in msg['sched']]))
+    
+    if chat_data['conversation'] == '/delete':
+        chat_data['msg_index'] = ind
+        output_string = "Delete this message?\n\n" + output_string
+        reply_keyboard = [['Yes','No']]
+        update.message.reply_text(
+            output_string,
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+        )
+        return 'CONFIRM_DELETE'
+    
+    else:
+        update.message.reply_text(output_string, )
+        return ConversationHandler.END
 
-    update.message.reply_text(output_string)
+def confirm_delete(bot, update, chat_data):
+    res = update.message.text
+    if res == 'No':
+        update.message.reply_text('User cancelled the operation.')
+        return ConversationHandler.END
+    
+    # get message id of message to be deleted
+    if chat_data['setting'] == 'All':
+        msgs_list = [msg for grp in all_msgs.values() for msg in grp]
+        delete_id = msgs_list[chat_data['msg_index']]['id']
+    else:
+        msgs_list = all_msgs[chat_data['setting']]
+        delete_id = msgs_list[chat_data['msg_index']]['id']
+    
+    # find message id then delete
+    for k in all_msgs.keys():
+        for i, msg in enumerate(all_msgs[k]):
+            if msg['id'] == delete_id:
+                deleted_msg = all_msgs[k].pop(i)
 
+    # write to file
+    with open(filename, 'w') as f:
+        json.dump(all_msgs, f)
+        logger.info('Results written to file.')
+
+    update.message.reply_text('Successfully deleted message.')
     return ConversationHandler.END
-
-
-# lookup UNID in all_scheduled_msgs and remove
-# write to file
-# scheduler will update accordingly
 
 
 # main program
@@ -260,7 +295,7 @@ sched_handler = ConversationHandler(
 )
 
 view_handler = ConversationHandler(
-    entry_points=[CommandHandler('view', view_msgs)],
+    entry_points=[CommandHandler('view', view_msgs, pass_chat_data=True)],
 
     states={
         'LIST_MSGS':[
@@ -276,12 +311,14 @@ view_handler = ConversationHandler(
 )
 
 delete_handler = ConversationHandler(
-    entry_points=[CommandHandler('delete', view_msgs)],
+    entry_points=[CommandHandler('delete', view_msgs, pass_chat_data=True)],
     states={
         'LIST_MSGS':[
             RegexHandler('^(All|Monthly|Weekly|Daily|Once)$', list_msgs, pass_chat_data=True)
         ],
-         
+        'SHOW_MSG':[MessageHandler(Filters.text, show_msg, pass_chat_data=True)],
+        'CONFIRM_DELETE':[RegexHandler('^(Yes|No)$', confirm_delete, pass_chat_data=True)]
+
     },
     
     fallbacks=[CommandHandler('cancel', cancel)]
@@ -289,6 +326,7 @@ delete_handler = ConversationHandler(
 
 dp.add_handler(sched_handler)
 dp.add_handler(view_handler)
+dp.add_handler(delete_handler)
 dp.add_error_handler(error)
 updater.start_polling()
 updater.idle()
