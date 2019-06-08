@@ -65,7 +65,7 @@ def create_msg(bot, update):
     return 'MSG'
 
 def schedule_msg(bot, update):
-    reply_keyboard = [['Monthly', 'Weekly', 'Daily', 'Once']]
+    reply_keyboard = [['Monthly', 'Weekly'], ['Daily', 'Once']]
     res = update.message.text
     msg_info['text'] = res
 
