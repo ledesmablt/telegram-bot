@@ -1,6 +1,7 @@
 test.py
 data/secret.json
 data/scheduled_msgs.json
+.main.py.swp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
